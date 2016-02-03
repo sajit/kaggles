@@ -1,0 +1,138 @@
+# JMJ
+
+# Quick readme. to run this run python pybrain_nn1.py , assuming you have train.csv and test.csv in same file
+#. first it reads data into a pybrain Classification Data Set, used for classification algos
+# The dataset has only 1 output but we use a Pybrain method convertOneToMany to map a single output into 10 possible
+# classifications
+# Then build a feed forward neural network with 784 inputs, 10 outputs and 1 hidden layer with 250? neurons
+# this is trained 20 times
+import csv
+from pybrain.datasets import ClassificationDataSet
+from pybrain.tools.shortcuts import buildNetwork, FeedForwardNetwork
+from pybrain.supervised.trainers import BackpropTrainer
+from numpy import *
+from pybrain.structure.modules import SoftmaxLayer, LinearLayer, SigmoidLayer
+from pybrain.structure import FullConnection
+from pybrain.utilities import percentError
+from random import randint
+
+X = []
+Y = []
+
+
+def split_test_train(dataset):
+    test_data, train_data = dataset.splitWithProportion(0.25)
+    test_data.__class__ = ClassificationDataSet
+    train_data.__class__ = ClassificationDataSet
+    test_data._convertToOneOfMany(bounds=[0, 1])
+    train_data._convertToOneOfMany(bounds=[0, 1])
+    print "Length of test_data " + str(test_data.__len__())
+    print "Length of train data " + str(train_data.__len__())
+    return test_data, train_data
+
+
+def get_dataset():
+    reader = csv.reader(open('train.csv', 'rb'))
+
+    header = reader.next()
+
+    # create a dataset, with 784 inputs 1 output
+    dataset = ClassificationDataSet(784, 1, nb_classes=10,
+                                    class_labels=['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'])
+    # assume last field in csv is single target variable
+    # and all other fields are input variables
+
+    for row in reader:
+        inputs = map(int, row[1:])
+        output = map(int, row[0:1])
+        X.append(inputs)
+        Y.append(output)
+        dataset.addSample(inputs, output)
+    # this maps the single target variable into 10 output classes
+    dataset._convertToOneOfMany(bounds=[0, 1])
+    return dataset
+
+
+def run_against_testset(net):
+    print "Predicting with the neural network"
+    test_reader = csv.reader(open('test.csv', 'rb'))
+
+    header = test_reader.next()
+
+    # write output
+    predictions_file = open("output1.csv", "w")
+    open_file_object = csv.writer(predictions_file)
+    open_file_object.writerow(["ImageId", "Label"])
+
+
+    predX = []
+    ids= []
+    count = 1
+    for row in test_reader:
+        inputs = map(int, row[0:])
+        prediction = net.activate(inputs)
+        predicted_answer = argmax(prediction)
+        predX.append(predicted_answer)
+        ids.append(count)
+        count += 1
+
+    open_file_object.writerows(zip(ids, predX))
+    predictions_file.close()
+    print 'Done.'
+
+
+def attempt1(dataset):
+    print "Attempt 1"
+    net = buildNetwork(784, 25, 10, bias=True, outclass=SoftmaxLayer)
+    train_nn(net, dataset)
+    # trainer = BackpropTrainer(net, dataset)
+    # trainer.trainUntilConvergence(dataset, maxEpochs=5, verbose=True)
+    print "Done training"
+    run_against_testset(net)
+
+
+def build_feed_forward():
+    n = FeedForwardNetwork()
+    inlayer = LinearLayer(784)
+    hiddenlayer = SigmoidLayer(250) # randomly chosen
+    outputlayer = SoftmaxLayer(10)
+    n.addInputModule(inlayer)
+    n.addModule(hiddenlayer)
+    n.addOutputModule(outputlayer)
+    in_to_hidden = FullConnection(inlayer, hiddenlayer)
+    hidden_to_out = FullConnection(hiddenlayer, outputlayer)
+    n.addConnection(in_to_hidden)
+    n.addConnection(hidden_to_out)
+    n.sortModules()
+    return n
+
+
+def attempt2(dataset):
+    print "Attempt 2"
+    fnn = build_feed_forward()
+    train_nn(fnn, dataset)
+    run_against_testset(fnn)
+
+
+def train_nn(nn, dataset):
+    print "Start training"
+    trainer = BackpropTrainer(nn, dataset=dataset, momentum=0.1, verbose=True, weightdecay=0.01)
+    train_data_set = dataset
+    epoch_count = 20
+    for i in range(0, epoch_count):
+        trainer.trainEpochs(1)
+        training_result = percentError(trainer.testOnClassData(verbose=True), train_data_set['class'])
+        # test_result = percentError(trainer.testOnClassData(verbose=True, dataset=test_data_set), test_data_set['class'])
+        print "epoch: %4d" % trainer.totalepochs, \
+            "  train error: %5.2f%%" % training_result
+        #    "  test error: %5.2f%%" % test_result
+    return trainer
+
+
+def main():
+    data_set = get_dataset()
+    attempt2(data_set)
+
+
+if __name__ == '__main__':
+    main()
