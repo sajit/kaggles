@@ -7,7 +7,6 @@
 # Then build a feed forward neural network with 784 inputs, 10 outputs and 1 hidden layer with 250? neurons
 # this is trained 20 times
 import csv
-import pickle
 from pybrain.datasets import ClassificationDataSet
 from pybrain.tools.shortcuts import FeedForwardNetwork
 
@@ -100,9 +99,6 @@ def attempt2(dataset):
     print "Attempt 2"
     fnn = build_feed_forward()
     train_nn(fnn, dataset)
-    fileObject = open('neural_network', 'w')
-    pickle.dump(fnn, fileObject)
-    fileObject.close()
     run_against_testset(fnn)
 
 
