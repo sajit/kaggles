@@ -109,7 +109,7 @@ def attempt2(dataset):
 def train_nn(nn, dataset):
     print "Start training"
     trainer = BackpropTrainer(nn, dataset=dataset, momentum=0.1, verbose=True, weightdecay=0.01)
-    trainer.trainUntilConvergence(dataset=dataset, maxEpochs=120, verbose=True, continueEpochs=10,validationProportion=.25)
+    trainer.trainUntilConvergence(dataset=dataset, maxEpochs=200, verbose=True, continueEpochs=10,validationProportion=.25)
 
     return trainer
 
